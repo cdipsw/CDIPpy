@@ -48,6 +48,7 @@ def rfindt(el, r, tag):
         r.append(el.text)
 
 
+<<<<<<< HEAD
 def read_url(url):
     response = _make_cdippy_request(url)
     return response.read().decode("UTF-8") if response else None
@@ -56,3 +57,25 @@ def read_url(url):
 def load_et_root(url):
     response = _make_cdippy_request(url)
     return ET.fromstring(response.read()) if response else None
+=======
+def url_exists(url):
+    req = urllib.request.Request(url)
+    try:
+        urllib.request.urlopen(req)
+    except Exception:
+        return False
+    else:
+        return True
+
+
+def read_url(url):
+    try:
+        r = urllib.request.urlopen(url).read().decode("UTF-8")
+    except Exception:
+        return None
+    return r
+
+
+def load_et_root(url):
+    return ET.fromstring(urllib.request.urlopen(url).read())
+>>>>>>> 4a237fd (re-org package and define public api)
