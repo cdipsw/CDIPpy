@@ -45,9 +45,4 @@ def get_wmo_id(
         ids = cu.pkl_load(pkl_fl)
     if stn in ids:
         return ids[stn]
-<<<<<<< HEAD
     return None
-=======
-    else:
-        return None
->>>>>>> 4a237fd (re-org package and define public api)
