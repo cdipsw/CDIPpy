@@ -10,8 +10,12 @@ class NcHashes:
     hashes_url = "http://cdip.ucsd.edu/data_access/metadata/wavecdf_by_datemod.txt"
     new_hashes = {}
 
-    def __init__(self, hash_file_location=""):
-        self.hash_pkl = hash_file_location + "/HASH.pkl"
+    def __init__(self):
+        """
+        Args:
+            hash_file_location (str, optional): A path to the location to store the local copy of HASH.pkl. Defaults to the current directory.
+        """
+        self.load_hash_table()
 
     def load_hash_table(self):
         """
