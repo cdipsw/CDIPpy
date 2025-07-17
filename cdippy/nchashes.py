@@ -3,7 +3,9 @@ import cdippy.utils.utils as cu
 
 
 class NcHashes:
-    """Methods for working with the online list of historic nc file hashes."""
+    """
+    A class that checks for changes to datasets since by reading the online list of historic netCDF file hashes.
+    """
 
     hashes_url = "http://cdip.ucsd.edu/data_access/metadata/wavecdf_by_datemod.txt"
     new_hashes = {}
@@ -12,6 +14,12 @@ class NcHashes:
         self.hash_pkl = hash_file_location + "/HASH.pkl"
 
     def load_hash_table(self):
+        """
+        Save the list of new hashes loaded into memory by `load_hash_tables` as local pickle file.
+        Overwrites last save HASH.pkl.
+        """
+        """
+        """
         lines = uu.read_url(self.hashes_url).strip().split("\n")
         for line in lines:
             if line[0:8] == "filename":
@@ -21,17 +29,14 @@ class NcHashes:
                 continue
             self.new_hashes[fields[0]] = fields[6]
 
-    def get_last_deployment(self, stn: str) -> str:
-        """Returns the last deployment string, e.g. 'd03'."""
-        last_deployment = "d00"
-        for name in self.new_hashes:
-            if name[0:5] == stn and name[5:7] == "_d" and last_deployment < name[6:9]:
-                last_deployment = name[6:9]
-        return last_deployment
-
     def compare_hash_tables(self) -> list:
-        """Return a list of nc files that have changed or are new."""
-        old_hashes = self.get_old_hashes()
+        """
+        Compare the current in-memory list of files, loaded by `load_hash_table` to the list saved in HASH.pkl and return a list of stations that are new or have changed.
+
+        Returns:
+            changed ([str]): A list of nc files that have changed or are since HASH.pkl was last saved.
+        """
+        old_hashes = self._get_old_hashes()
         changed = []
         if old_hashes:
             if len(self.new_hashes) == 0:
@@ -44,7 +49,11 @@ class NcHashes:
         return changed
 
     def save_new_hashes(self):
+        """
+        Save the list of new hashes loaded into memory by `load_hash_tables` as local pickle file.
+        Overwrites last saved HASH.pkl.
+        """
         cu.pkl_dump(self.new_hashes, self.hash_pkl)
 
-    def get_old_hashes(self):
+    def _get_old_hashes(self):
         return cu.pkl_load(self.hash_pkl)

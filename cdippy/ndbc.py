@@ -1,6 +1,4 @@
-"""
-Convenience methods for working with NDBC stations.
-"""
+"""Methods for working with NDBC"""
 
 import os
 from datetime import datetime, timezone
@@ -19,12 +17,7 @@ cdip_base = "https://cdip.ucsd.edu"
 
 
 def get_stn_info(wmo_id):
-    """
-    *Work in progress*:  querying ndbc sos service.
-
-    Args:
-        wmo_id (str): The WMO id of the station.
-    """
+    """Work in progress, querying ndbc sos service."""
     qry = "&".join([request, service, version, outputformat, describe_stn + wmo_id])
     url = "?".join([sos_base, qry])
     root = uu.load_et_root(url)
@@ -32,19 +25,13 @@ def get_stn_info(wmo_id):
     uu.rfindt(root, results, "description")
 
 
-def get_wmo_id(stn):
-    """
-    Queries cdip table of WMO ids for the id of a given station. Optionally stores the table as a pickle file.
-
-    Args:
-        stn (str): CDIP 3 digit id.
-        store (bool): Whether to store the table locally. Defaults to `True`.
-        filepath (str): Where to store the WMO id table locally. Does nothing if `store=False`. Defaults to ".".
-
-    Returns:
-        id (str): The NDBC id for the station as a string or `None` if it is not found.
-    """
-    pkl_fl = "./WMO_IDS.pkl"
+def get_wmo_id(
+    stn,
+    store=True,
+    filepath=".",
+):
+    """Queries cdip wmo id table for a given station. Drops pickle file locally."""
+    pkl_fl = filepath + "/WMO_IDS.pkl" if store else None
     now = datetime.now(timezone.utc)
     if not pkl_fl or now.minute == 23 or not os.path.isfile(pkl_fl):
         url = "/".join([cdip_base, "wmo_ids"])
