@@ -1,5 +1,5 @@
-import cdippy.utils as ut
-import cdippy.plots.plot_utils as pu
+import cdippy.utils.utils as ut
+import cdippy.plots.utils as pu
 from datetime import datetime
 import numpy as np
 import calendar
@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 
 def make_plot(
-    stns: str, start: datetime, end: datetime, params: str, x_inch: int
+    stns: str, start: datetime, end: datetime, params: str, x_inch: int = None
 ) -> tuple:
     """CDIP's classic compendium plot for multiple stations and parameters.
 

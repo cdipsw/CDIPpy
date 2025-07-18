@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 import os
 
+import logging
 import netCDF4
 
 import numpy as np
@@ -8,8 +9,11 @@ import numbers
 from bisect import bisect_left, bisect_right
 
 import cdippy.ndbc as ndbc
-import cdippy.utils as cu
-import cdippy.url_utils as uu
+import cdippy.utils.utils as cu
+import cdippy.utils.urls as uu
+
+
+logger = logging.getLogger(__name__)
 
 
 class CDIPnc:
@@ -144,7 +148,7 @@ class CDIPnc:
             is set to True, only nonpub records will be returned.
         """
         if start is None:
-            start = datetime(1975, 1, 1)
+            start = datetime(1975, 1, 1).replace(tzinfo=timezone.utc)
         if end is None:
             end = datetime.now(timezone.utc)
         self.set_timespan(start, end)
@@ -156,14 +160,19 @@ class CDIPnc:
     def set_timespan(self, start, end):
         """Sets request timespan"""
         if isinstance(start, str):
-            self.start_dt = datetime.strptime(start, "%Y-%m-%d %H:%M:%S")
+            self.start_dt = datetime.strptime(start, "%Y-%m-%d %H:%M:%S").replace(
+                tzinfo=timezone.utc
+            )
         else:
             self.start_dt = start
         if isinstance(end, str):
-            self.end_dt = datetime.strptime(end, "%Y-%m-%d %H:%M:%S")
+            self.end_dt = datetime.strptime(end, "%Y-%m-%d %H:%M:%S").replace(
+                tzinfo=timezone.utc
+            )
         else:
             self.end_dt = end
         self.start_stamp = cu.datetime_to_timestamp(self.start_dt)
+
         self.end_stamp = cu.datetime_to_timestamp(self.end_dt)
 
     def get_request(self) -> dict:
@@ -365,23 +374,25 @@ class CDIPnc:
         e_idx = bisect_right(times, end_stamp, s_idx)
         return s_idx, e_idx
 
-    def get_nc(self, url: str = None) -> netCDF4.Dataset:
-        if url is None:
+    def get_nc(self, url: str = None, retry: bool = False) -> netCDF4.Dataset:
+        if not url:
             url = self.url
-        # Check if the html page or file exists
-        if (
-            url[0:4] == "http" and not uu.url_exists(url + ".html")
-        ) and not os.path.isfile(url):
-            return None
         try:
-            nc = netCDF4.Dataset(url)
-        except Exception:
+            return netCDF4.Dataset(url)
+        except Exception as e:
             # Try again if unsuccessful (nc file not ready? THREDDS problem?)
-            try:
-                nc = netCDF4.Dataset(url)
-            except Exception:
-                nc = None
-        return nc
+            if retry:
+                logger.warning(
+                    msg=f"Retrying to open dataset at {url} due to an unexpected exception: {e}"
+                )
+                try:
+                    return netCDF4.Dataset(url)
+                except Exception:
+                    pass
+            logger.exception(
+                msg=f"Failed to open dataset at {url} due to an unexpected exception: {e}"
+            )
+            return None
 
     def byte_arr_to_string(self, b_arr: np.ma.masked_array) -> str:
         if np.ma.is_masked(b_arr):
@@ -1027,7 +1038,3 @@ class RealtimeXY(Archive):
         """For parameters see CDIPnc.set_dataset_info."""
         CDIPnc.__init__(self, data_dir)
         self.set_dataset_info(stn, org, "realtimexy")
-
-
-if __name__ == "__main__":
-    pass
