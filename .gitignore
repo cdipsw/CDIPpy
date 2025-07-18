@@ -4,7 +4,10 @@
 .venv
 .vscode
 **/.coverage
+uv.lock
 
 # build files
 **/*.egg-info
 **/__pycache__
+**/build
+**/.ipynb_checkpoints/

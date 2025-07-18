@@ -1,0 +1,73 @@
+<catalog xmlns="http://www.unidata.ucar.edu/namespaces/thredds/InvCatalog/v1.0" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.2">
+<service name="all" serviceType="compound" base="">
+<service name="odap" serviceType="OpenDAP" base="/thredds/dodsC/"/>
+<service name="dap4" serviceType="DAP4" base="/thredds/dap4/"/>
+<service name="http" serviceType="HTTPServer" base="/thredds/fileServer/"/>
+<service name="wcs" serviceType="WCS" base="/thredds/wcs/"/>
+<service name="wms" serviceType="WMS" base="/thredds/wms/"/>
+<service name="ncssGrid" serviceType="NetcdfSubset" base="/thredds/ncss/grid/"/>
+<service name="ncssPoint" serviceType="NetcdfSubset" base="/thredds/ncss/point/"/>
+<service name="cdmremote" serviceType="CdmRemote" base="/thredds/cdmremote/"/>
+<service name="iso" serviceType="ISO" base="/thredds/iso/"/>
+<service name="ncml" serviceType="NCML" base="/thredds/ncml/"/>
+<service name="uddc" serviceType="UDDC" base="/thredds/uddc/"/>
+</service>
+<service name="cdip2" serviceType="compound" base="">
+<service name="odap" serviceType="OpenDAP" base="/thredds/dodsC/"/>
+<service name="http" serviceType="HTTPServer" base="/thredds/fileServer/"/>
+<service name="ncml" serviceType="NCML" base="/thredds/ncml/"/>
+<service name="iso" serviceType="ISO" base="/thredds/iso/"/>
+<service name="uddc" serviceType="UDDC" base="/thredds/uddc/"/>
+<service name="wms" serviceType="WMS" base="/thredds/wms/"/>
+</service>
+<dataset name="CDIP Predeploy">
+<property name="DatasetScan" value="true"/>
+<metadata inherited="true">
+<serviceName>all</serviceName>
+<dataType>Station</dataType>
+</metadata>
+<dataset name="028p0_d24_rt.nc" ID="CDIP_Predeploy/028p0_d24_rt.nc" urlPath="cdip/predeploy/028p0_d24_rt.nc">
+<dataSize units="Kbytes">45.72</dataSize>
+<date type="modified">2024-12-19T20:31:53.627Z</date>
+</dataset>
+<dataset name="028p0_d24_xy.nc" ID="CDIP_Predeploy/028p0_d24_xy.nc" urlPath="cdip/predeploy/028p0_d24_xy.nc">
+<dataSize units="Mbytes">3.342</dataSize>
+<date type="modified">2024-12-19T20:33:18.914Z</date>
+</dataset>
+<dataset name="029p0_d25_rt.nc" ID="CDIP_Predeploy/029p0_d25_rt.nc" urlPath="cdip/predeploy/029p0_d25_rt.nc">
+<dataSize units="Mbytes">1.380</dataSize>
+<date type="modified">2022-01-26T23:02:36Z</date>
+</dataset>
+<dataset name="029p0_d25_xy.nc" ID="CDIP_Predeploy/029p0_d25_xy.nc" urlPath="cdip/predeploy/029p0_d25_xy.nc">
+<dataSize units="Mbytes">61.77</dataSize>
+<date type="modified">2022-01-26T23:03:17Z</date>
+</dataset>
+<dataset name="029p0_d26_rt.nc" ID="CDIP_Predeploy/029p0_d26_rt.nc" urlPath="cdip/predeploy/029p0_d26_rt.nc">
+<dataSize units="Mbytes">27.61</dataSize>
+<date type="modified">2025-06-25T21:00:26.185Z</date>
+</dataset>
+<dataset name="029p0_d26_xy.nc" ID="CDIP_Predeploy/029p0_d26_xy.nc" urlPath="cdip/predeploy/029p0_d26_xy.nc">
+<dataSize units="Mbytes">16.39</dataSize>
+<date type="modified">2024-11-25T21:32:38.137Z</date>
+</dataset>
+<dataset name="036p0_d52_rt.nc" ID="CDIP_Predeploy/036p0_d52_rt.nc" urlPath="cdip/predeploy/036p0_d52_rt.nc">
+<dataSize units="Mbytes">3.811</dataSize>
+<date type="modified">2024-09-22T22:01:59.523Z</date>
+</dataset>
+<dataset name="036p0_d52_xy.nc" ID="CDIP_Predeploy/036p0_d52_xy.nc" urlPath="cdip/predeploy/036p0_d52_xy.nc">
+<dataSize units="Mbytes">78.76</dataSize>
+<date type="modified">2024-09-20T10:17:48.412Z</date>
+</dataset>
+<dataset name="045p0_d30_rt.nc" ID="CDIP_Predeploy/045p0_d30_rt.nc" urlPath="cdip/predeploy/045p0_d30_rt.nc">
+<dataSize units="Mbytes">1.298</dataSize>
+<date type="modified">2025-04-11T21:01:02.460Z</date>
+</dataset>
+<dataset name="045p0_d30_xy.nc" ID="CDIP_Predeploy/045p0_d30_xy.nc" urlPath="cdip/predeploy/045p0_d30_xy.nc">
+<dataSize units="Mbytes">29.38</dataSize>
+<date type="modified">2025-04-11T21:01:18.973Z</date>
+</dataset>
+<catalogRef xlink:href="COMPLETED/catalog.xml" xlink:title="COMPLETED" ID="CDIP_Predeploy/COMPLETED" name="COMPLETED">
+<property name="DatasetScan" value="true"/>
+</catalogRef>
+</dataset>
+</catalog>
