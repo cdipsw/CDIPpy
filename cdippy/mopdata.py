@@ -1,9 +1,8 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from bisect import bisect_left
 
 from cdippy.cdipnc import CDIPnc
-import cdippy.timestamp_utils as tsu
-import cdippy.utils as cu
+import cdippy.utils.utils as cu
 
 
 class MopData(CDIPnc):
@@ -235,7 +234,9 @@ class MopData(CDIPnc):
 
         if start is not None and end is None:  # Target time
             if isinstance(start, str):
-                start = datetime.strptime(start, "%Y-%m-%d %H:%M:%S")
+                start = datetime.strptime(start, "%Y-%m-%d %H:%M:%S").replace(
+                    tzinfo=timezone.utc
+                )
             ts_I = self.get_target_timespan(
                 cu.datetime_to_timestamp(start), target_records, prefix + "Time"
             )
@@ -284,20 +285,17 @@ class MopData(CDIPnc):
         # i_b will be possibly one more than the last index
         i_b = min(i_b, last_idx)
         # Target timestamp is exactly equal to a data time
+        closest_idx = None
         if i_b == last_idx or stamps[i_b] == target_timestamp:
             closest_idx = i_b
         elif i_b > 0:
-            closest_idx = tsu.get_closest_index(i_b - 1, i_b, stamps, target_timestamp)
+            closest_idx = cu.get_closest_index(i_b - 1, i_b, stamps, target_timestamp)
 
         # Now we have the closest index, find the intervals
 
         if closest_idx is not None:
-            interval = tsu.get_interval(stamps, closest_idx, num_target_records)
+            interval = cu.get_interval(stamps, closest_idx, num_target_records)
             return interval
 
         # If we get to here there's a problem
         return (None, None, None)
-
-
-if __name__ == "__main__":
-    pass

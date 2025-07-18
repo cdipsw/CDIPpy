@@ -1,29 +1,45 @@
-"""Make sure PYTHONPATH environment variable is set to access cdippy package"""
-
-import unittest
-from datetime import datetime, timedelta  # , timezone
-import os
-
-import numpy as np
-
 # CDIP imports
 import cdippy.cdipnc as nc
 import cdippy.stndata as sd
+import cdippy.mopdata as md
 
 # import cdippy.mopdata as md
 import cdippy.ncstats as ns
 import cdippy.nchashes as nh
-import cdippy.url_utils as uu
-import cdippy.location as loc
+import cdippy.utils.urls as uu
+import cdippy.utils.location as loc
 import cdippy.ndbc as ndbc
 import cdippy.spectra as sp
+
+import unittest
+from unittest.mock import patch, MagicMock
+from datetime import datetime
+
+import numpy as np
+import netCDF4
+
+
+RESOURCES_DIR = "./tests/resources"
+
+# test file info
+archive_stn = "036p1"
+archive_stn_file = archive_stn + "_d01.nc"
+archive_start = "2000-09-30 00:00:00"
+archive_1hr = "2000-09-30 01:00:00"
+
+
+def get_urllopen_mock(filepath):
+    with open(f"{RESOURCES_DIR}/{filepath}", "rb") as f:
+        content = f.read()
+    mock_response = MagicMock()
+    mock_response.read.return_value = content
+    mock_response.__enter__.return_value = mock_response
+    return mock_response
 
 
 def get_active_datasets(dataset_name):
     url = (
-        "http://thredds.cdip.ucsd.edu/thredds/catalog/cdip/"
-        + dataset_name
-        + "/catalog.xml"
+        f"http://thredds.cdip.ucsd.edu/thredds/catalog/cdip/{dataset_name}/catalog.xml"
     )
     root = uu.load_et_root(url)
     datasets = []
@@ -39,149 +55,137 @@ def convert_date(date_str):
 class TestCdipnc(unittest.TestCase):
 
     def setUp(self):
-        pass
+        self.ds = netCDF4.Dataset(f"{RESOURCES_DIR}/predeploy/028p0_d24_rt.nc")
 
-    def tearDown(self):
-        pass
-
-    def test_url(self):
-        a = nc.Archive("100p1", data_dir="https://cdip.ucsd.edu")
+    @patch("cdippy.cdipnc.netCDF4.Dataset")
+    def test_url(self, mock_dataset):
+        mock_dataset.return_value = self.ds
+        a = nc.Archive(archive_stn, data_dir="https://cdip.ucsd.edu")
         self.assertEqual(
-            a.url, "https://cdip.ucsd.edu/thredds/dodsC/cdip/archive/100p1/100p1_d01.nc"
+            a.url,
+            f"https://cdip.ucsd.edu/thredds/dodsC/cdip/archive/{archive_stn}/{archive_stn_file}",
         )
 
-    def test_data_path(self):
-        a = nc.Archive("100p1", data_dir="/project/WNC/WNC_DATA")
-        self.assertEqual(a.url, "/project/WNC/WNC_DATA/ARCHIVE/100p1/100p1_d01.nc")
+    @patch("cdippy.cdipnc.netCDF4.Dataset")
+    def test_data_path(self, mock_dataset):
+        mock_dataset.return_value = self.ds
+        a = nc.Archive(archive_stn, data_dir="/project/WNC/WNC_DATA")
+        self.assertEqual(
+            a.url, f"/project/WNC/WNC_DATA/ARCHIVE/{archive_stn}/{archive_stn_file}"
+        )
 
-    def test_active_predeploy(self):
-        dataset_names = get_active_datasets("predeploy")
+    @patch("cdippy.cdipnc.netCDF4.Dataset")
+    @patch("cdippy.utils.urls.request.urlopen")
+    def test_active_predeploy(self, mock_urlopen, mock_dataset):
+        ds = "predeploy"
+        catalog_name = f"{ds}/catalog.xml"
+        mock_urlopen.return_value = get_urllopen_mock(catalog_name)
+        dataset_names = get_active_datasets(ds)
+        mock_dataset.return_value = self.ds
         r = None
-        if len(dataset_names) > 0:
-            for dn in dataset_names:
-                if "_rt" in dn:
-                    stn = dn[0:3]
-                    dep = int(dn[7:9])
-                    a = nc.Active(stn, dep, "predeploy")
-                    r = {}
-                    if a is not None:
-                        a.set_request_info(pub_set="all")
-                        r = a.get_request()
-                    self.assertTrue("waveTime" in r and len(r["waveTime"]) > 0)
-                    break
-        else:
-            self.assertTrue(1 == 1)  # Pass the test if no predeploy datasets
+        for dn in dataset_names:
+            if "_rt" in dn:
+                stn = dn[0:3]
+                dep = int(dn[7:9])
+                a = nc.Active(stn, dep, "predeploy")
+                r = {}
+                if a is not None:
+                    a.set_request_info(pub_set="all")
+                    r = a.get_request()
+                self.assertTrue("waveTime" in r and len(r["waveTime"]) > 0)
 
 
-########
-# Temporarily disabled by haj on 6/9
-# TODO: make reliable
-# class TestMopData(unittest.TestCase):
+class TestMopData(unittest.TestCase):
 
-#     def setUp(self):
-#         # Dates within an existing archive deployment BP100
-#         now = datetime.now(timezone.utc)
-#         now_day = now.strftime("%Y-%m-%d")
-#         self.dt1 = now_day + " 00:00:00"
-#         self.dt2 = now_day + " 23:59:59"
-#         self.v = ["waveHs"]
+    def setUp(self):
+        # Dates within test archive deployment BP100
+        self.dt1 = "2025-06-26 00:00:00"
+        self.dt2 = "2025-06-26 23:59:59"
+        self.v = ["waveHs"]
 
-#     def tearDown(self):
-#         self.dt1 = None
-#         self.dt2 = None
-#         self.v = None
+        self.nowcast = netCDF4.Dataset(f"{RESOURCES_DIR}/MOP/BP100_nowcast.nc")
+        self.ecmwf = netCDF4.Dataset(f"{RESOURCES_DIR}/MOP/BP100_ecmwf_fc.nc")
+        self.forecast = netCDF4.Dataset(f"{RESOURCES_DIR}/MOP/BP100_forecast.nc")
 
-#     def test_read_nc_data(self):
-#         m = md.MopData("BP100", "nowcast")
-#         d = m.get_series(self.dt1, self.dt2, self.v)
-#         self.assertEqual(len(d["waveHs"]), 9)
+    @patch("cdippy.cdipnc.netCDF4.Dataset")
+    def test_read_nc_data(self, mock_dataset):
+        mock_dataset.return_value = self.nowcast
+        m = md.MopData("BP100", "nowcast")
+        d = m.get_series(self.dt1, self.dt2, self.v)
+        self.assertEqual(len(d["waveHs"]), 18)
 
-#     def test_target_records(self):
-#         m = md.MopData("BP100", "nowcast")
-#         d = m.get_series(self.dt1, None, self.v, target_records=6)
-#         self.assertEqual(len(d["waveHs"]), 7)
+    @patch("cdippy.cdipnc.netCDF4.Dataset")
+    def test_target_records(self, mock_dataset):
+        mock_dataset.return_value = self.nowcast
+        m = md.MopData("BP100", "nowcast")
+        d = m.get_series(self.dt1, None, self.v, target_records=6)
+        self.assertEqual(len(d["waveHs"]), 7)
 
-#     def test_parameters(self):
-#         m = md.MopData("BP100", "nowcast")
-#         d = m.get_parameters(self.dt1, self.dt2)
-#         self.assertEqual(len(d.keys()), 5)
-#         self.assertTrue("waveDp" in d.keys())
+    @patch("cdippy.cdipnc.netCDF4.Dataset")
+    def test_parameters(self, mock_dataset):
+        mock_dataset.return_value = self.nowcast
+        m = md.MopData("BP100", "nowcast")
+        d = m.get_parameters(self.dt1, self.dt2)
+        self.assertEqual(len(d.keys()), 5)
+        self.assertTrue("waveDp" in d.keys())
 
-#     def test_spectra(self):
-#         m = md.MopData("BP100", "nowcast")
-#         d = m.get_spectra(self.dt1, self.dt2)
-#         self.assertEqual(len(d.keys()), 8)
-#         self.assertTrue("waveA1Value" in d.keys())
+    @patch("cdippy.cdipnc.netCDF4.Dataset")
+    def test_spectra(self, mock_dataset):
+        mock_dataset.return_value = self.nowcast
+        m = md.MopData("BP100", "nowcast")
+        d = m.get_spectra(self.dt1, self.dt2)
+        self.assertEqual(len(d.keys()), 8)
+        self.assertTrue("waveA1Value" in d.keys())
 
-#     def test_url(self):
-#         m = md.MopData("BP100", "ecmwf_fc")
-#         self.assertEqual(
-#             m.url,
-#             "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/model/MOP_validation/BP100_ecmwf_fc.nc",
-#         )
+    @patch("cdippy.cdipnc.netCDF4.Dataset")
+    def test_url(self, mock_dataset):
+        mock_dataset.return_value = self.ecmwf
+        m = md.MopData("BP100", "ecmwf_fc")
+        self.assertEqual(
+            m.url,
+            "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/model/MOP_validation/BP100_ecmwf_fc.nc",
+        )
 
-#     def test_meta(self):
-#         m = md.MopData("BP100", "ecmwf_fc")
-#         d = m.get_mop_meta()
-#         self.assertTrue("time_coverage_start" in d.keys())
-#         self.assertEqual(len(d.keys()), 16)
+    @patch("cdippy.cdipnc.netCDF4.Dataset")
+    def test_meta(self, mock_dataset):
+        mock_dataset.return_value = self.ecmwf
+        m = md.MopData("BP100", "ecmwf_fc")
+        d = m.get_mop_meta()
+        self.assertTrue("time_coverage_start" in d.keys())
+        self.assertEqual(len(d.keys()), 16)
 
-#     def test_ecmwf_fc(self):
-#         m = md.MopData("BP100", "ecmwf_fc")
-#         meta = m.get_mop_meta()
-#         start = convert_date(meta["time_coverage_start"])
-#         d = m.get_series(start, vrs=self.v, target_records=60)
-#         self.assertEqual(len(d.keys()), 2)
-#         self.assertEqual(len(d["waveHs"]), 61)
+    @patch("cdippy.cdipnc.netCDF4.Dataset")
+    def test_ecmwf_fc(self, mock_dataset):
+        mock_dataset.return_value = self.ecmwf
+        m = md.MopData("BP100", "ecmwf_fc")
+        start = self.dt1
+        d = m.get_series(start, vrs=self.v, target_records=60)
+        self.assertEqual(len(d.keys()), 2)
+        self.assertEqual(len(d["waveHs"]), 61)
 
-#     def test_alongshore(self):
-#         m = md.MopData("D0001", "forecast")
-#         meta = m.get_mop_meta()
-#         start = convert_date(meta["time_coverage_start"])
-#         d = m.get_series(start, vrs=self.v, target_records=60)
-#         self.assertEqual(len(d.keys()), 2)
-#         self.assertEqual(len(d["waveHs"]), 61)
+    @patch("cdippy.cdipnc.netCDF4.Dataset")
+    def test_alongshore(self, mock_dataset):
+        mock_dataset.return_value = self.forecast
+        m = md.MopData("BP100", "forecast")
+        start = self.dt1
+        d = m.get_series(start, vrs=self.v, target_records=60)
+        self.assertEqual(len(d.keys()), 2)
+        self.assertEqual(len(d["waveHs"]), 61)
 
 
 class TestSpectra(unittest.TestCase):
 
     def setUp(self):
+        self.ds = netCDF4.Dataset(f"{RESOURCES_DIR}/archive/{archive_stn_file}")
+
+    @patch("cdippy.cdipnc.netCDF4.Dataset")
+    def test_redistribute(self, mock_dataset):
+        mock_dataset.return_value = self.ds
         # Station and dates within an existing archive deployment
-        self.s100 = sd.StnData("100p1")
-        self.dt_100_1 = "2017-10-16 00:00:00"
-        self.dt_100_2 = "2017-10-16 01:00:00"
-
-        # Station and dates that cross deployments of mk3 and mk4
-        self.s142 = sd.StnData("142p1")
-        self.dt_142_1 = "2017-01-24 00:00:00"
-        self.dt_142_2 = "2017-02-25 12:00:00"
-
-        # Station and dates that cross deployments of mk4 mk3
-        self.s260 = sd.StnData("260p1")
-        self.dt_260_1 = "2024-04-24 00:00:00"
-        self.dt_260_2 = "2024-04-26 00:00:00"
-
-        # Station and dates that cross historic and realtime (mk4 to mk3)
-        # There should be 202 waveTime and spectrum should have 64 bands.
-        self.s271 = sd.StnData("271p1")
-        self.dt_271_1 = "2023-09-20 00:00:00"
-        self.dt_271_2 = "2023-10-14 00:00:00"
-        # We should check that the values for the 2d vars in historic match
-        # after we redistribute.
-        self.dt_271_3 = "2023-09-20 00:00:00"
-        self.dt_271_4 = "2023-09-24 00:00:00"
-
-        self.dt_271_5 = "2023-10-12 00:00:00"
-        self.dt_271_6 = "2023-10-14 00:00:00"
-
-    def tearDown(self):
-        self.s = None
-        self.dt1 = None
-        self.dt2 = None
-        self.v = None
-
-    def test_redistribute(self):
-        data = self.s100.get_spectra(self.dt_100_1, self.dt_100_2)
+        stn = sd.StnData(archive_stn)
+        dt_1 = archive_start
+        dt_2 = archive_1hr
+        data = stn.get_spectra(dt_1, dt_2)
         self.assertEqual(len(data["waveEnergyDensity"]), 2)
         s = sp.Spectra()
         s.set_spectrumArr_fromQuery(data)
@@ -201,23 +205,23 @@ class TestSpectra(unittest.TestCase):
 class TestStnData(unittest.TestCase):
 
     def setUp(self):
-        self.s = sd.StnData("100p1")
+        self.ds = netCDF4.Dataset(f"{RESOURCES_DIR}/archive/{archive_stn_file}")
+        with patch("netCDF4.Dataset", return_value=self.ds):
+            self.s = sd.StnData(archive_stn)
         # Dates within an existing archive deployment
-        self.dt1 = "2017-10-16 00:00:00"
-        self.dt2 = "2017-10-16 01:00:00"
+        self.dt1 = archive_start
+        self.dt2 = archive_1hr
         self.v = ["waveHs"]
 
-    def tearDown(self):
-        self.s = None
-        self.dt1 = None
-        self.dt2 = None
-        self.v = None
-
-    def test_read_nc_data(self):
+    @patch("cdippy.cdipnc.netCDF4.Dataset")
+    def test_read_nc_data(self, mock_dataset):
+        mock_dataset.return_value = self.ds
         d = self.s.get_series(self.dt1, self.dt2, self.v)
         self.assertEqual(len(d["waveHs"]), 2)
 
-    def test_pub_set_and_mask(self):
+    @patch("cdippy.cdipnc.netCDF4.Dataset")
+    def test_pub_set_and_mask(self, mock_dataset):
+        mock_dataset.return_value = self.ds
         # Tests mask
         d = self.s.get_series(self.dt1, self.dt2, self.v, "nonpub")
         self.assertEqual(len(d["waveHs"]), 0)
@@ -229,65 +233,60 @@ class TestStnData(unittest.TestCase):
         d = self.s.get_series(self.dt1, self.dt2, self.v, "all")
         self.assertEqual(len(d["waveHs"]), 2)
 
-    def test_across_deployments(self):
-        d = self.s.get_series(
-            "2007-05-30 00:00:00", "2007-06-01 23:59:59", ["xyzData"], "public"
-        )
-        self.assertEqual(len(d["xyzTime"]), 304127)
+    @patch("cdippy.cdipnc.netCDF4.Dataset")
+    def test_across_deployments(self, mock_dataset):
+        mock_dataset.return_value = self.ds
+        d = self.s.get_series(self.dt1, self.dt2, ["xyzData"], "public")
+        self.assertEqual(len(d["xyzTime"]), 4608)
 
-    def test_target_records(self):
+    @patch("cdippy.cdipnc.netCDF4.Dataset")
+    def test_target_records(self, mock_dataset):
+        mock_dataset.return_value = self.ds
         d = self.s.get_series(self.dt1, None, self.v, target_records=6)
         self.assertEqual(len(d["waveHs"]), 7)
-
-    def test_get_nc_files(self):
-        # d = self.s.get_nc_files()
-        # self.assertTrue('100p1_d01.nc' in d.keys())
-        pass
-
-    # def test_ww3(self):
-    #     s = sd.StnData("100p1", org="ww3")
-    #     d = s.get_series("2016-08-01 23:00:00", "2016-08-01 23:59:59", ["waveHs"])
-    #     self.assertEqual(len(d["waveHs"]), 1)
 
     def test_stn_meta(self):
         d = self.s.get_stn_meta()
         self.assertTrue("geospatial_lon_min" in d.keys())
 
-    def test_mark1_filter_delay(self):
+    @patch("cdippy.cdipnc.netCDF4.Dataset")
+    def test_mark1_filter_delay(self, mock_dataset):
+        mock_dataset.return_value = self.ds
         s = sd.StnData("071p1")
-        end = datetime(1996, 1, 22, 15, 57, 00)
-        start = end - timedelta(hours=2)
-        d = s.get_xyz(start, end)
-        self.assertEqual(len(d["xyzTime"]), 9216)
+        d = s.get_xyz(self.dt1, self.dt2)
+        self.assertEqual(len(d["xyzTime"]), 4608)
 
-    def test_use_archive_if_no_moored_hs(self):
+    @patch("cdippy.cdipnc.netCDF4.Dataset")
+    def test_use_archive_if_no_moored_hs(self, mock_dataset):
+        mock_dataset.return_value = self.ds
         s = sd.StnData("100p1", deploy_num=15)
         d = s.get_series(self.dt1, self.dt2, ["waveHs"])
         self.assertEqual(len(d["waveHs"]), 2)
 
-    def test_use_archive_if_no_moored_xyz(self):
+    @patch("cdippy.cdipnc.netCDF4.Dataset")
+    def test_use_archive_if_no_moored_xyz(self, mock_dataset):
+        mock_dataset.return_value = self.ds
         s = sd.StnData("100p1", deploy_num=15)
         d = s.get_series(self.dt1, self.dt2, ["xyzZDisplacement"])
         self.assertEqual(len(d["xyzZDisplacement"]), 4608)
 
-    def test_stn_meta_deploy_num(self):
+    @patch("cdippy.cdipnc.netCDF4.Dataset")
+    @patch("cdippy.utils.urls.request.urlopen")
+    def test_stn_meta_deploy_num(self, mock_urlopen, mock_dataset):
+        ds = "predeploy"
+        catalog_name = f"{ds}/catalog.xml"
+        mock_urlopen.return_value = get_urllopen_mock(catalog_name)
         dataset_names = get_active_datasets("predeploy")
-        if len(dataset_names) > 0:
-            for dn in dataset_names:
-                if "_rt" in dn:
-                    stn = dn[0:3]
-                    dep = int(dn[7:9])
-                    s = sd.StnData(stn, deploy_num=dep)
-                    r = s.get_stn_meta()
-                    self.assertTrue("metaStationName" in r)
-                    break
-        else:
-            self.assertTrue(1 == 1)  # Ok if no predeploy datasets
+        mock_dataset.return_value = self.ds
 
-    def test_get_gps_for_old_deployment(self):
-        s = sd.StnData("142p3", deploy_num=14)
-        d = s.get_series("1975-12-20 00:00:00", "2019-01-31 23:59:59", s.gps_vars)
-        self.assertTrue("gpsLatitude" in d and len(d["gpsLatitude"]) > 0)
+        self.assertEqual(len(dataset_names), 11)
+        for dn in dataset_names:
+            if "_rt" in dn:
+                stn = dn[0:3]
+                dep = int(dn[7:9])
+                s = sd.StnData(stn, deploy_num=dep)
+                r = s.get_stn_meta()
+                self.assertTrue("metaStationName" in r)
 
     def test_remove_duplicates(self):
         dd = {}
@@ -298,15 +297,15 @@ class TestStnData(unittest.TestCase):
 
 
 class TestLatest(unittest.TestCase):
-
     def setUp(self):
-        self.latest = nc.Latest()
+        self.ds = netCDF4.Dataset(f"{RESOURCES_DIR}/realtime/latest_3day.nc")
 
-    def tearDown(self):
-        self.latest = None
+    @patch("cdippy.cdipnc.netCDF4.Dataset")
+    def test_get_latest(self, mock_dataset):
+        mock_dataset.return_value = self.ds
+        latest = nc.Latest()
 
-    def test_get_latest(self):
-        d = self.latest.get_latest(
+        d = latest.get_latest(
             pub_set="both-all",
             meta_vars=[
                 "metaLongitude",
@@ -334,33 +333,33 @@ class TestLatest(unittest.TestCase):
 class TestNcStats(unittest.TestCase):
 
     def setUp(self):
-        self.stats = ns.NcStats("100p1")
+        self.ds = netCDF4.Dataset(f"{RESOURCES_DIR}/archive/{archive_stn_file}")
 
-    def tearDown(self):
-        self.stats = None
-
-    def test_summary(self):
-        summary = self.stats.deployment_summary()
+    @patch("cdippy.cdipnc.netCDF4.Dataset")
+    def test_summary(self, mock_dataset):
+        mock_dataset.return_value = self.ds
+        stats = ns.NcStats(archive_stn)
+        summary = stats.deployment_summary()
         self.assertEqual(
-            summary["d12"]["time_coverage_start"], datetime(2013, 12, 13, 22, 0, 0)
+            summary["d01"]["time_coverage_start"], datetime(2000, 9, 27, 16, 0)
         )
 
 
 class TestNcHashes(unittest.TestCase):
 
-    def setUp(self):
-        self.hashes = nh.NcHashes()
+    @patch("cdippy.utils.urls.request.urlopen")
+    def test_compare_hash_tables(self, mock_urlopen):
+        mock_urlopen.return_value = get_urllopen_mock("HASH")
 
-    def tearDown(self):
-        self.hashes = None
-        os.remove("HASH.pkl")
-        # os.remove('WMO_IDS.pkl')
-
-    def test_compare_hash_tables(self):
-        self.hashes.save_new_hashes()
-        self.hashes.load_hash_table()
-        compare = self.hashes.compare_hash_tables()
+        hashes = nh.NcHashes(hash_file_location=RESOURCES_DIR)
+        hashes.load_hash_table()
+        compare = hashes.compare_hash_tables()
         self.assertEqual(len(compare), 0)
+
+        mock_urlopen.return_value = get_urllopen_mock("HASH_new")
+        hashes.load_hash_table()
+        compare = hashes.compare_hash_tables()
+        self.assertEqual(len(compare), 1)
 
 
 class TestLocation(unittest.TestCase):
@@ -372,10 +371,6 @@ class TestLocation(unittest.TestCase):
         lon2 = -158.11487
         self.l1 = loc.Location(lat1, lon1)
         self.l2 = loc.Location(lat2, lon2)
-
-    def tearDown(self):
-        self.l1 = None
-        self.l2 = None
 
     def test_write_loc(self):
         self.assertEqual(self.l1.write_loc(), "21.6689 -158.1156")
@@ -392,49 +387,73 @@ class TestLocation(unittest.TestCase):
 
 class TestNDBC(unittest.TestCase):
 
+    @patch("cdippy.utils.urls.request.urlopen")
+    def test_get_wmo_id(self, mock_urlopen):
+        mock_urlopen.return_value = get_urllopen_mock("wmo_ids")
+        self.assertEqual(ndbc.get_wmo_id("100", store=False), "46225")
+
+
+class TestRequests(unittest.TestCase):
+    user_agent = None
+
+    # TODO: set header when netcdf dataset is accessed
+    # class MockRequestHandler(BaseHTTPRequestHandler):
+    #     user_agent = None
+
+    #     def do_GET(self):
+    #         print("CAPTURED")
+    #         with open(f"{RESOURCES_DIR}/realtime/latest_3day.nc", "rb") as f:
+    #             body = f.read()
+
+    #         self.send_response(200)
+    #         self.send_header("Content-Type", "applicaion/octet-stream")
+    #         self.send_header("Content-Length", str(len(body)))
+    #         self.end_headers()
+    #         self.wfile.write(body)
+
+    #     def log_message(self, format, *args):
+    #         pass  # Disable default logging
+
+    # def test_netcdf4_dataset_headers(self):
+    #     httpd = HTTPServer(("127.0.0.1", 0), TestRequests.MockRequestHandler)
+    #     port = httpd.server_port
+    #     server_thread = threading.Thread(target=httpd.serve_forever)
+    #     server_thread.start()
+
+    #     try:
+    #         test_cdip = nc.CDIPnc()
+    #         url = f"http://127.0.0.1:{port}/thredds/dodsC/fake.nc"
+    #         try:
+    #             test_cdip.get_nc(url)
+    #         except Exception:
+    #             pass
+
+    #         user_agent = TestRequests.MockRequestHandler.user_agent
+    #         self.assertEqual(user_agent, uu.cdippy_lib)
+    #     finally:
+    #         httpd.shutdown()
+    #         server_thread.join()   print(self.headers)
+    #         TestRequests.MockRequestHandler.user_agent = dict(self.headers)[
+    #             "User-Agent"
+    #         ]
+
     def setUp(self):
-        pass
+        self.user_agent = None
 
-    def tearDown(self):
-        os.remove("./WMO_IDS.pkl")
+    def mock_urlopen_response(self, request, *args, **kwargs):
+        self.user_agent = dict(request.header_items())["User-agent"]
 
-    def test_get_wmo_id(self):
-        self.assertEqual(ndbc.get_wmo_id("100"), "46225")
+        class MockResponse:
+            def read(self_inner):
+                return b"mock data"
 
+            def close(self_inner):
+                pass
 
-# How to run a single method
-# suite = unittest.TestLoader().loadTestsFromName('test_cdippy.TestSpectra.test_mk3mk4_redistribute')
-# suite = unittest.TestLoader().loadTestsFromName('test_cdippy.TestSpectra.test_redistribute')
-# unittest.TextTestRunner(verbosity=2).run(suite)
-# sys.exit(0)
+        return MockResponse()
 
-# How to run all tests in a specified class
-# suite = unittest.TestLoader().loadTestsFromTestCase(TestSpectra)
-# unittest.TextTestRunner(verbosity=2).run(suite)
-# sys.exit(0)
-
-# Adding tests to a test suite
-# suite = unittest.TestSuite()
-# cdipnc_suite = unittest.TestLoader().loadTestsFromTestCase(TestCdipnc)
-# mopdata_suite = unittest.TestLoader().loadTestsFromTestCase(TestMopData)
-# stndata_suite = unittest.TestLoader().loadTestsFromTestCase(TestStnData)
-# latest_suite = unittest.TestLoader().loadTestsFromTestCase(TestLatest)
-# ncstat_suite = unittest.TestLoader().loadTestsFromTestCase(TestNcStats)
-# nchash_suite = unittest.TestLoader().loadTestsFromTestCase(TestNcHashes)
-# ndbc_suite = unittest.TestLoader().loadTestsFromTestCase(TestNDBC)
-# spectra_suite = unittest.TestLoader().loadTestsFromTestCase(TestSpectra)
-# suite.addTests(
-#     [
-#         cdipnc_suite,
-#         mopdata_suite,
-#         stndata_suite,
-#         latest_suite,
-#         ncstat_suite,
-#         nchash_suite,
-#         ndbc_suite,
-#         spectra_suite,
-#     ]
-# )
-# # suite.addTests([ncstat_suite])
-
-# unittest.TextTestRunner(verbosity=2).run(suite)
+    @patch("cdippy.utils.urls.request.urlopen")
+    def test_url_open_headers(self, mock_urlopen):
+        mock_urlopen.side_effect = self.mock_urlopen_response
+        ndbc.get_wmo_id(stn=100, store=False)
+        self.assertEqual(self.user_agent, uu.cdippy_lib)
