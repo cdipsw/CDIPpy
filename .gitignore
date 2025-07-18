@@ -10,3 +10,4 @@ uv.lock
 **/*.egg-info
 **/__pycache__
 **/build
+**/.ipynb_checkpoints/
