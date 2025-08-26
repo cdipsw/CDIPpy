@@ -92,6 +92,41 @@ def datetime_to_tz(dt: datetime, tzname: str = "US/Pacific") -> datetime:
     return utc_dt.astimezone(tz)
 
 
+# Utils for srrays of timestamps
+
+
+def get_closest_index(i1: int, i2: int, T: list, t0: int) -> int:
+    """Returns the index i such that abs(T[i]-t0) is minimum for i1,i2"""
+    if abs(T[i1] - t0) <= abs(T[i2] - t0):
+        return i1
+    else:
+        return i2
+
+
+def get_interval(T: list, i: int, n: int) -> tuple:
+    """
+    Returns a 3-tuple (T[i], T[i+n], bounds_exceeded) where -inf < n < inf
+    and bounds_exceeded is -1 or +1 if exceeded left or right respectively.
+    """
+    bounds_exceeded = 0
+    last_T_idx = len(T) - 1
+
+    if i + n > last_T_idx:
+        bounds_exceeded = 1
+    elif i + n < 0:
+        bounds_exceeded = -1
+
+    if n >= 0:
+        return (T[i], T[min(i + n, last_T_idx)], bounds_exceeded)
+    else:
+        return (T[max(0, i + n)], T[i], bounds_exceeded)
+
+
+def combine_intervals(I1: tuple, I2: tuple) -> tuple:
+    """Return a 2-tuple of timestamps (I1[0], I2[1])."""
+    return (I1[0], I2[1])
+
+
 # Timespan
 class Timespan:
     """Class to handle timespans."""

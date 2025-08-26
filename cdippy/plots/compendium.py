@@ -1,5 +1,5 @@
-import cdippy.utils as ut
-import cdippy.plots.plot_utils as pu
+import cdippy.utils.utils as ut
+import cdippy.plots.utils as pu
 from datetime import datetime
 import numpy as np
 import calendar

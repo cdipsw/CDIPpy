@@ -14,8 +14,7 @@ from cdippy.cdipnc import (
     Active,
     ActiveXY,
 )
-import cdippy.timestamp_utils as tsu
-import cdippy.utils as cu
+import cdippy.utils.utils as cu
 import cdippy.spectra as sp
 
 
@@ -568,7 +567,7 @@ class StnData(CDIPnc):
             if i_b == r_last_idx or r_stamps[i_b] == target_timestamp:
                 r_closest_idx = i_b
             elif i_b > 0:
-                r_closest_idx = tsu.get_closest_index(
+                r_closest_idx = cu.get_closest_index(
                     i_b - 1, i_b, r_stamps, target_timestamp
                 )
 
@@ -595,39 +594,35 @@ class StnData(CDIPnc):
                 else:  # No realtime file
                     h_closest_idx = i_b
             else:  # Within middle of historic stamps
-                h_closest_idx = tsu.get_closest_index(
+                h_closest_idx = cu.get_closest_index(
                     i_b - 1, i_b, h_stamps, target_timestamp
                 )
 
         # Now we have the closest index, find the intervals
 
         if r_closest_idx is not None:
-            r_interval = tsu.get_interval(r_stamps, r_closest_idx, num_target_records)
+            r_interval = cu.get_interval(r_stamps, r_closest_idx, num_target_records)
             # If bound exceeded toward H and H exists, cacluate h_interval
             if r_interval[2] < 0 and h_ok:
                 if not h_last_idx:
                     h_stamps = self.historic.get_var(time_var)[:]
                     h_last_idx = len(h_stamps) - 1
-                h_interval = tsu.get_interval(
+                h_interval = cu.get_interval(
                     h_stamps, h_last_idx, num_target_records + r_closest_idx + 1
                 )
-                return tsu.combine_intervals(h_interval, r_interval)
+                return cu.combine_intervals(h_interval, r_interval)
             else:
                 return r_interval
         elif h_closest_idx is not None:
-            h_interval = tsu.get_interval(h_stamps, h_closest_idx, num_target_records)
+            h_interval = cu.get_interval(h_stamps, h_closest_idx, num_target_records)
             # If bound exceeded toward R and R exists, cacluate r_interval
             if h_interval[2] > 0 and r_ok:
-                r_interval = tsu.get_interval(
+                r_interval = cu.get_interval(
                     r_stamps, 0, num_target_records + h_closest_idx - h_last_idx - 1
                 )
-                return tsu.combine_intervals(h_interval, r_interval)
+                return cu.combine_intervals(h_interval, r_interval)
             else:
                 return h_interval
 
         # If we get to here there's a problem
         return (None, None, None)
-
-
-if __name__ == "__main__":
-    pass

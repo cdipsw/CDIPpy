@@ -1,5 +1,5 @@
-import cdippy.url_utils as uu
-import cdippy.utils as cu
+import cdippy.utils.urls as uu
+import cdippy.utils.utils as cu
 
 
 class NcHashes:
@@ -48,7 +48,3 @@ class NcHashes:
 
     def get_old_hashes(self):
         return cu.pkl_load(self.hash_pkl)
-
-
-if __name__ == "__main__":
-    pass

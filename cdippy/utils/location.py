@@ -95,7 +95,3 @@ class Location:
         direction = degrees(direction)
         direction = (direction + 360) % 360
         return direction
-
-
-if __name__ == "__main__":
-    pass

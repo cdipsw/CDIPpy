@@ -9,8 +9,11 @@ import numbers
 from bisect import bisect_left, bisect_right
 
 import cdippy.ndbc as ndbc
-import cdippy.utils as cu
-import cdippy.url_utils as uu
+import cdippy.utils.utils as cu
+import cdippy.utils.urls as uu
+
+
+logger = logging.getLogger(__name__)
 
 
 logger = logging.getLogger(__name__)

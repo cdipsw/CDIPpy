@@ -5,7 +5,7 @@ import bisect
 
 
 # CDIP imports
-from cdippy import utils as ut
+from cdippy.utils import utils as ut
 from cdippy.stndata import StnData
 
 import matplotlib as mpl

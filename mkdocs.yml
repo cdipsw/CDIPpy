@@ -2,6 +2,16 @@ site_name: CDIPpy Docs
 
 plugins:
   - macros
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options: 
+            show_source: true
+            heading_level: 2
+            show_root_heading: true
+            show_signature_annotations: true
+            docstring_style: google
 
 theme:
   name: readthedocs
@@ -9,6 +19,7 @@ theme:
 nav:
   - Home: index.md
   - Quick start: quickstart.md
+  - API reference: api.md
   - Users guide:
     - Installation: user_guide/index.md
     - Data access: user_guide/data_access.md

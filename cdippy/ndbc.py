@@ -3,8 +3,8 @@
 import os
 from datetime import datetime, timezone
 
-import cdippy.url_utils as uu
-import cdippy.utils as cu
+import cdippy.utils.urls as uu
+import cdippy.utils.utils as cu
 
 sos_base = "https://sdf.ndbc.noaa.gov/sos/server.php"
 request = "request=DescribeSensor"
@@ -47,7 +47,3 @@ def get_wmo_id(
         return ids[stn]
     else:
         return None
-
-
-if __name__ == "__main__":
-    pass

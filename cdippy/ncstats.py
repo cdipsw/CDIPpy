@@ -116,12 +116,3 @@ class NcStats(StnData):
             self.data[flag_name], categories=self.meta.get_flag_values(flag_name)
         )
         return cat.rename_categories(self.meta.get_flag_meanings(flag_name))
-
-
-if __name__ == "__main__":
-    # - Tests
-    def t1():
-        av = NcStats("100p1")
-        print(av.make_stats())
-
-    # t1()

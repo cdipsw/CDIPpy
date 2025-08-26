@@ -6,8 +6,8 @@ import cdippy.mopdata as md
 # import cdippy.mopdata as md
 import cdippy.ncstats as ns
 import cdippy.nchashes as nh
-import cdippy.url_utils as uu
-import cdippy.location as loc
+import cdippy.utils.urls as uu
+import cdippy.utils.location as loc
 import cdippy.ndbc as ndbc
 import cdippy.spectra as sp
 
@@ -75,7 +75,7 @@ class TestCdipnc(unittest.TestCase):
         )
 
     @patch("cdippy.cdipnc.netCDF4.Dataset")
-    @patch("cdippy.url_utils.request.urlopen")
+    @patch("cdippy.utils.urls.request.urlopen")
     def test_active_predeploy(self, mock_urlopen, mock_dataset):
         ds = "predeploy"
         catalog_name = f"{ds}/catalog.xml"
@@ -271,7 +271,7 @@ class TestStnData(unittest.TestCase):
         self.assertEqual(len(d["xyzZDisplacement"]), 4608)
 
     @patch("cdippy.cdipnc.netCDF4.Dataset")
-    @patch("cdippy.url_utils.request.urlopen")
+    @patch("cdippy.utils.urls.request.urlopen")
     def test_stn_meta_deploy_num(self, mock_urlopen, mock_dataset):
         ds = "predeploy"
         catalog_name = f"{ds}/catalog.xml"
@@ -347,7 +347,7 @@ class TestNcStats(unittest.TestCase):
 
 class TestNcHashes(unittest.TestCase):
 
-    @patch("cdippy.url_utils.request.urlopen")
+    @patch("cdippy.utils.urls.request.urlopen")
     def test_compare_hash_tables(self, mock_urlopen):
         mock_urlopen.return_value = get_urllopen_mock("HASH")
 
@@ -387,7 +387,7 @@ class TestLocation(unittest.TestCase):
 
 class TestNDBC(unittest.TestCase):
 
-    @patch("cdippy.url_utils.request.urlopen")
+    @patch("cdippy.utils.urls.request.urlopen")
     def test_get_wmo_id(self, mock_urlopen):
         mock_urlopen.return_value = get_urllopen_mock("wmo_ids")
         self.assertEqual(ndbc.get_wmo_id("100", store=False), "46225")
@@ -452,7 +452,7 @@ class TestRequests(unittest.TestCase):
 
         return MockResponse()
 
-    @patch("cdippy.url_utils.request.urlopen")
+    @patch("cdippy.utils.urls.request.urlopen")
     def test_url_open_headers(self, mock_urlopen):
         mock_urlopen.side_effect = self.mock_urlopen_response
         ndbc.get_wmo_id(stn=100, store=False)
