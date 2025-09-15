@@ -1,8 +1,15 @@
 site_name: CDIPpy Docs
 
+# theme:
+#   name: material
+
+markdown_extensions:
+  - attr_list
+
 plugins:
   - macros
   - search
+  - mkdocs-jupyter
   - mkdocstrings:
       handlers:
         python:

@@ -269,6 +269,7 @@ class StnData(CDIPnc):
         self.force_64bands = force_64bands
 
         self.set_request_info(start, end, vrs, pub_set, apply_mask)
+        print(self.deploy_num)
 
         if prefix == "xyz" and self.deploy_num is None:
             return self.__merge_xyz_request()
