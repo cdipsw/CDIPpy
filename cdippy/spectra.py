@@ -22,11 +22,15 @@ class Spectra(object):
         self.specArr = []
 
     def get_spectraNum(self):
-        """return the number of objects (spectrum) in the specArr"""
+        """
+        Gets the number of objects (spectrum) in the specArr
+
+        Returns:
+            len (num): the number of objects in the sprectra array.
+        """
         return len(self.specArr)
 
     def __str__(self):
-        """Spectra is an array of Spectrum(s)"""
         return "Spectra is an array of {0} Spectrum(s)".format(self.get_spectraNum())
 
     def get_spectraType(self):
